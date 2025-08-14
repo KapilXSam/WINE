@@ -4,8 +4,8 @@ FROM debian:bookworm-slim
 # Set environment variables to avoid interactive prompts during installation
 ENV DEBIAN_FRONTEND=noninteractive
 
-# Enable 32-bit architecture, which is required by Wine
-RUN dpkg --add-architecture i360
+# Enable 32-bit architecture, which is required by Wine (CORRECTED)
+RUN dpkg --add-architecture i386
 
 # Update package lists and install prerequisite packages,
 # including xvfb and its dependency xauth.
