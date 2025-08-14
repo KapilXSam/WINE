@@ -4,11 +4,11 @@ FROM debian:bookworm-slim
 # Set environment variables to avoid interactive prompts during installation
 ENV DEBIAN_FRONTEND=noninteractive
 
-# Enable 32-bit architecture, which is required by Wine (CORRECTED)
+# Enable 32-bit architecture, which is required by Wine
 RUN dpkg --add-architecture i386
 
-# Update package lists and install prerequisite packages,
-# including xvfb and its dependency xauth.
+# Update package lists and install prerequisite packages.
+# Added cabextract for winetricks.
 RUN apt-get update && \
     apt-get install -y --no-install-recommends \
     wget \
@@ -16,6 +16,7 @@ RUN apt-get update && \
     ca-certificates \
     xvfb \
     xauth \
+    cabextract \
     && rm -rf /var/lib/apt/lists/*
 
 # Download the official WineHQ repository key and add it securely
@@ -46,11 +47,18 @@ COPY --chown=appuser:appuser your_app/ .
 # Set up a clean Wine environment
 ENV WINEPREFIX /home/appuser/.wine
 ENV WINEARCH win64
-# Suppress some of the graphics-related error messages
 ENV WINEDEBUG=-all
 
-# Initialize the Wine prefix (this will run the first time the container starts)
-# We run this inside xvfb-run as well, as some installers show a GUI
+# --- NEW ROBUST INITIALIZATION ---
+# 1. Download winetricks, a helper script for Wine
+RUN wget -O /usr/local/bin/winetricks https://raw.githubusercontent.com/Winetricks/winetricks/master/src/winetricks && \
+    chmod +x /usr/local/bin/winetricks
+
+# 2. Force creation of the Wine prefix and install core fonts silently
+#    The '-q' flag is for quiet/unattended installation.
+RUN xvfb-run --auto-servernum winetricks -q corefonts
+
+# 3. Explicitly update the prefix to ensure it's properly configured
 RUN xvfb-run --auto-servernum wineboot -u
 
 # The command to run your application inside the virtual display
