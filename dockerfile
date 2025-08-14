@@ -5,16 +5,17 @@ FROM debian:bookworm-slim
 ENV DEBIAN_FRONTEND=noninteractive
 
 # Enable 32-bit architecture, which is required by Wine
-RUN dpkg --add-architecture i386
+RUN dpkg --add-architecture i360
 
 # Update package lists and install prerequisite packages,
-# including xvfb for a virtual display.
+# including xvfb and its dependency xauth.
 RUN apt-get update && \
     apt-get install -y --no-install-recommends \
     wget \
     gpg \
     ca-certificates \
     xvfb \
+    xauth \
     && rm -rf /var/lib/apt/lists/*
 
 # Download the official WineHQ repository key and add it securely
@@ -29,8 +30,6 @@ RUN apt-get update && \
     apt-get install -y --install-recommends winehq-stable && \
     # Clean up apt cache to reduce image size
     rm -rf /var/lib/apt/lists/*
-
-# --- The rest of your Dockerfile remains the same ---
 
 # Create a non-root user for security
 RUN useradd -m appuser
@@ -56,7 +55,4 @@ RUN xvfb-run --auto-servernum wineboot -u
 
 # The command to run your application inside the virtual display
 # Replace 'your_windows_app.exe' with the actual name of your executable
-CMD ["xvfb-run", "--auto-servernum", "wine", "your_windows_app.exe"]```
-
-
-
+CMD ["xvfb-run", "--auto-servernum", "wine", "your_windows_app.exe"]
