@@ -1,4 +1,4 @@
-# FINAL DOCKERFILE FOR RENDER
+# FINAL DOCKERFILE FOR RENDER (32-bit Compatibility Mode)
 # Base Image: Use the modern, stable, and lightweight Debian 12 "Bookworm"
 FROM debian:bookworm-slim
 
@@ -9,12 +9,11 @@ ENV DEBIAN_FRONTEND=noninteractive
 # STAGE 1: SYSTEM SETUP (as root user)
 #----------------------------------------------------------------#
 
-# Enable 32-bit architecture, which is a core requirement for Wine
+# Enable 32-bit architecture, which is the core of this setup
 RUN dpkg --add-architecture i386
 
-# Update package lists and install all system prerequisites in one layer.
-# This includes the virtual display (xvfb), its authenticator (xauth),
-# and a tool for winetricks (cabextract).
+# Update package lists and install all system prerequisites.
+# Added libgl1 to satisfy potential graphics library dependencies.
 RUN apt-get update && \
     apt-get install -y --no-install-recommends \
     wget \
@@ -23,6 +22,7 @@ RUN apt-get update && \
     xvfb \
     xauth \
     cabextract \
+    libgl1 \
     && rm -rf /var/lib/apt/lists/*
 
 # Add the official WineHQ repository key securely
@@ -55,22 +55,18 @@ USER appuser
 WORKDIR /home/appuser
 
 # Copy your application files from your GitHub repo into the container.
-# The owner of these files will be correctly set to 'appuser'.
 COPY --chown=appuser:appuser your_app/ .
 
-# Set environment variables for the Wine prefix. This ensures Wine's files
-# are created inside the user's home directory (/home/appuser/.wine).
+# Set environment variables for the Wine prefix.
+# CRITICAL FIX: Force a 32-bit Wine architecture for maximum compatibility.
+ENV WINEARCH win32
 ENV WINEPREFIX /home/appuser/.wine
-ENV WINEARCH win64
 ENV WINEDEBUG=-all
 
-# Initialize the Wine environment for the user.
-# This creates the virtual C: drive and installs essential Microsoft fonts.
-# It runs inside the virtual display to prevent GUI-related errors.
+# Initialize the 32-bit Wine environment for the user.
 RUN xvfb-run --auto-servernum winetricks -q corefonts
 RUN xvfb-run --auto-servernum wineboot -u
 
 # Set the final command to execute when the container starts.
-# It wraps your application in the virtual display to handle any GUI elements.
 # IMPORTANT: Replace 'your_windows_app.exe' with the actual name of your executable.
 CMD ["xvfb-run", "--auto-servernum", "wine", "your_windows_app.exe"]
